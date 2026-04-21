@@ -14,7 +14,6 @@ const openSettingsBtn = document.getElementById('open-settings-btn');
 const closeModalBtn = document.getElementById('close-modal-btn');
 const modalBackdrop = document.getElementById('modal-backdrop');
 const apiKeyInput = document.getElementById('api-key-input');
-const proxyUrlInput = document.getElementById('proxy-url-input');
 const toggleVisBtn = document.getElementById('toggle-visibility-btn');
 const saveSettingsBtn = document.getElementById('save-settings-btn');
 
@@ -44,6 +43,7 @@ const toneSummary = document.getElementById('tone-summary');
 // State
 let selectedFile = null;
 let chartInstance = null;
+const DEFAULT_API_KEY = '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';
 
 // ─── Utility: Terminal Logger ───
 function logTerm(message, type = 'system') {
@@ -80,39 +80,28 @@ themeToggleBtn.addEventListener('click', () => {
 });
 
 // ─── Settings & API Key Management ───
-// The default key allows public visitors to use the app immediately.
-const DEFAULT_API_KEY = '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';
-
 function loadApiKey() {
-  // If the user has saved a custom key in settings, use it. Otherwise, use the default.
-  return localStorage.getItem('deckcipher_nvidia_key') || DEFAULT_API_KEY;
+  const savedKey = localStorage.getItem('deckcipher_custom_key');
+  if (savedKey) {
+    apiKeyInput.value = savedKey;
+    return savedKey;
+  }
+  return DEFAULT_API_KEY;
 }
 
-function loadProxyUrl() {
-  return localStorage.getItem('deckcipher_proxy_url') || '';
-}
-
-function saveApiKey(key, proxy) {
-  if (key.trim() === '') {
-    localStorage.removeItem('deckcipher_nvidia_key');
-    logTerm('Custom API Key cleared. Reverted to default system key.', 'system');
+function saveSettings() {
+  const val = apiKeyInput.value.trim();
+  if (val && val !== DEFAULT_API_KEY) {
+    localStorage.setItem('deckcipher_custom_key', val);
   } else {
-    localStorage.setItem('deckcipher_nvidia_key', key.trim());
-    logTerm('Custom API Key saved securely to local storage.', 'success');
+    localStorage.removeItem('deckcipher_custom_key');
   }
-  
-  if (proxy.trim() === '') {
-    localStorage.removeItem('deckcipher_proxy_url');
-  } else {
-    localStorage.setItem('deckcipher_proxy_url', proxy.trim());
-    logTerm('CORS Proxy URL saved.', 'success');
-  }
+  closeModal();
+  logTerm('Settings saved securely to localStorage.', 'system');
 }
 
 // Open Modal
 openSettingsBtn.addEventListener('click', () => {
-  apiKeyInput.value = localStorage.getItem('deckcipher_nvidia_key') || '';
-  proxyUrlInput.value = localStorage.getItem('deckcipher_proxy_url') || '';
   settingsModal.classList.remove('hidden');
 });
 
@@ -132,8 +121,7 @@ toggleVisBtn.addEventListener('click', () => {
 
 // Save Settings
 saveSettingsBtn.addEventListener('click', () => {
-  saveApiKey(apiKeyInput.value, proxyUrlInput.value);
-  closeModal();
+  saveSettings();
 });
 
 // ─── Local Vault (History) ───
@@ -334,15 +322,7 @@ async function extractText(file) {
 
 // ─── NVIDIA API Engine ───
 async function analyzeWithNVIDIA(text, persona) {
-  const apiKey = loadApiKey();
-  
-  if (!apiKey) {
-    logTerm('API Key missing. Please configure it in Settings.', 'error');
-    throw new Error('API Key missing');
-  }
-  
-  logTerm(`Initiating handshake with NVIDIA NIM (Llama-3.1-70B)...`, 'system');
-  setTermStatus('Inference Active');
+  logTerm('Initiating handshake with DeckCipher Vercel API...', 'system');
   
   const personaPrompts = {
     cfo: "You are a Chief Financial Officer. Focus on revenue, costs, ROI, financial risks, and fiscal strategy.",
@@ -366,27 +346,19 @@ Analyze the following presentation text. You must return your response STRICTLY 
   "tone_summary": "A one sentence summary of the presentation's overall tone."
 }
 `;
-
+  const apiKey = loadApiKey();
+  
   try {
-    const proxyUrl = loadProxyUrl();
-    const endpoint = 'https://integrate.api.nvidia.com/v1/chat/completions';
+    // We now route securely through our own Vercel Backend
+    const endpoint = '/api/chat';
     
-    // If a proxy URL is provided (like our custom Vercel backend), use it entirely.
-    // Otherwise, default to NVIDIA (which works locally but fails on GitHub Pages).
-    let finalUrl = endpoint;
-    if (proxyUrl) {
-      if (proxyUrl.includes('?url=')) {
-        finalUrl = proxyUrl + encodeURIComponent(endpoint);
-      } else {
-        finalUrl = proxyUrl;
-      }
-    }
-    
-    if (!proxyUrl && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-      logTerm('Warning: Running on external domain without a proxy. CORS may block the request.', 'system');
+    // If we're on a pure static host (like GitHub Pages or localhost file:// without a server)
+    // the relative path will fail. Warn the user.
+    if (window.location.protocol === 'file:' || window.location.hostname.includes('github.io')) {
+      logTerm('Warning: Running purely static. API calls to /api/chat will fail unless deployed to Vercel.', 'system');
     }
 
-    const response = await fetch(finalUrl, {
+    const response = await fetch(endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -399,13 +371,13 @@ Analyze the following presentation text. You must return your response STRICTLY 
           { role: 'user', content: text }
         ],
         temperature: 0.2,
-        max_tokens: 1024,
-      }),
+        max_tokens: 1500
+      })
     });
 
     if (!response.ok) {
-      const err = await response.text();
-      throw new Error(`NVIDIA API Error ${response.status}: ${err}`);
+      let errText = await response.text();
+      throw new Error(`Status ${response.status}: ${errText}`);
     }
 
     logTerm('Inference successful. Receiving payload...', 'success');
@@ -420,9 +392,9 @@ Analyze the following presentation text. You must return your response STRICTLY 
     return JSON.parse(content);
     
   } catch (error) {
-    if (error.message.includes('Failed to fetch')) {
-      logTerm('Inference failed: CORS Blocked. Browser prevented direct API call from a remote domain.', 'error');
-      logTerm('Solution: Open Settings and configure a CORS Proxy URL (e.g. corsproxy.io).', 'error');
+    if (error.message.includes('Failed to fetch') || error.message.includes('Not Found')) {
+      logTerm('Inference failed: Could not reach Vercel Backend API.', 'error');
+      logTerm('Solution: Ensure this repository is deployed as a Full-Stack application on Vercel.', 'error');
     } else {
       logTerm(`Inference failed: ${error.message}`, 'error');
     }
@@ -543,6 +515,7 @@ analyzeBtn.addEventListener('click', async () => {
 
 // ─── Initialization ───
 document.addEventListener('DOMContentLoaded', () => {
+  loadApiKey();
   loadVault();
   logTerm('Welcome to DeckCipher. System is ready for analysis.', 'system');
 });
