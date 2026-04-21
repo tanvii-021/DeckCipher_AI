@@ -1,293 +1,447 @@
 /**
  * ════════════════════════════════════════════
- *  DeckCipher AI — app.js
- *  Client-side presentation analytics engine
+ *  DeckCipher AI — Premium Client Logic
  * ════════════════════════════════════════════
  */
 
-// ─── DOM References ───
-const dropZone       = document.getElementById('drop-zone');
-const fileInput      = document.getElementById('file-input');
-const fileInfo       = document.getElementById('file-info');
-const fileNameEl     = document.getElementById('file-name');
-const fileSizeEl     = document.getElementById('file-size');
-const analyzeBtn     = document.getElementById('analyze-btn');
-const resultsSection = document.getElementById('results-section');
-const loadingOverlay = document.getElementById('loading-overlay');
+// ─── DOM Elements ───
+const themeToggleBtn = document.getElementById('theme-toggle-btn');
+const htmlEl = document.documentElement;
 
-// Result content slots
+// Settings Modal
+const settingsModal = document.getElementById('settings-modal');
+const openSettingsBtn = document.getElementById('open-settings-btn');
+const closeModalBtn = document.getElementById('close-modal-btn');
+const modalBackdrop = document.getElementById('modal-backdrop');
+const apiKeyInput = document.getElementById('api-key-input');
+const toggleVisBtn = document.getElementById('toggle-visibility-btn');
+const saveSettingsBtn = document.getElementById('save-settings-btn');
+
+// Terminal
+const terminalConsole = document.getElementById('terminal-console');
+const termStatus = document.getElementById('term-status');
+
+// Vault
+const vaultList = document.getElementById('vault-list');
+
+// Engine Controls
+const dropZone = document.getElementById('drop-zone');
+const fileInput = document.getElementById('file-input');
+const fileInfo = document.getElementById('file-info');
+const fileNameEl = document.getElementById('file-name');
+const fileSizeEl = document.getElementById('file-size');
+const analyzeBtn = document.getElementById('analyze-btn');
+const personaSelect = document.getElementById('persona-select');
+
+// Results
+const resultsSection = document.getElementById('results-section');
 const summaryContent = document.getElementById('summary-content');
 const actionsContent = document.getElementById('actions-content');
-const toneContent    = document.getElementById('tone-content');
+const resultPersonaBadge = document.getElementById('result-persona-badge');
+const toneSummary = document.getElementById('tone-summary');
 
-// ─── State ───
+// State
 let selectedFile = null;
+let chartInstance = null;
 
-// ─── Helpers ───
-
-/**
- * Format bytes into a human-readable string.
- * @param {number} bytes
- * @returns {string}
- */
-function formatFileSize(bytes) {
-  if (bytes === 0) return '0 B';
-  const units = ['B', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(1024));
-  return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${units[i]}`;
+// ─── Utility: Terminal Logger ───
+function logTerm(message, type = 'system') {
+  const line = document.createElement('div');
+  line.className = `term-line ${type}`;
+  
+  const timestamp = new Date().toLocaleTimeString([], { hour12: false, hour: '2-digit', minute:'2-digit', second:'2-digit' });
+  line.textContent = `[${timestamp}] ${message}`;
+  
+  terminalConsole.appendChild(line);
+  terminalConsole.scrollTop = terminalConsole.scrollHeight;
 }
 
-/**
- * Show / hide the loading overlay.
- * @param {boolean} show
- */
-function setLoading(show) {
-  loadingOverlay.classList.toggle('hidden', !show);
+function setTermStatus(status, isError = false) {
+  termStatus.textContent = status;
+  termStatus.style.color = isError ? '#ff5555' : 'var(--nvidia-green)';
 }
 
-/**
- * Validate that the file is a .pptx
- * @param {File} file
- * @returns {boolean}
- */
-function isValidPPTX(file) {
-  const validMime = 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
-  return file.name.toLowerCase().endsWith('.pptx') || file.type === validMime;
+// ─── Theme Management ───
+themeToggleBtn.addEventListener('click', () => {
+  const currentTheme = htmlEl.getAttribute('data-theme');
+  const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+  htmlEl.setAttribute('data-theme', newTheme);
+  
+  // Update icon
+  const icon = themeToggleBtn.querySelector('i');
+  if (newTheme === 'light') {
+    icon.classList.remove('ph-sun');
+    icon.classList.add('ph-moon');
+  } else {
+    icon.classList.remove('ph-moon');
+    icon.classList.add('ph-sun');
+  }
+});
+
+// ─── Settings & API Key Management ───
+function loadApiKey() {
+  return localStorage.getItem('deckcipher_nvidia_key') || '';
 }
 
-// ─── File Selection ───
+function saveApiKey(key) {
+  localStorage.setItem('deckcipher_nvidia_key', key.trim());
+}
 
-/**
- * Handle a selected file — validate, display info, enable button.
- * @param {File} file
- */
-function handleFileSelect(file) {
-  if (!isValidPPTX(file)) {
-    alert('Please upload a valid .pptx file.');
+// Open Modal
+openSettingsBtn.addEventListener('click', () => {
+  apiKeyInput.value = loadApiKey();
+  settingsModal.classList.remove('hidden');
+});
+
+// Close Modal
+const closeModal = () => settingsModal.classList.add('hidden');
+closeModalBtn.addEventListener('click', closeModal);
+modalBackdrop.addEventListener('click', closeModal);
+
+// Toggle visibility
+toggleVisBtn.addEventListener('click', () => {
+  const isPassword = apiKeyInput.type === 'password';
+  apiKeyInput.type = isPassword ? 'text' : 'password';
+  const icon = toggleVisBtn.querySelector('i');
+  icon.classList.toggle('ph-eye', !isPassword);
+  icon.classList.toggle('ph-eye-slash', isPassword);
+});
+
+// Save Settings
+saveSettingsBtn.addEventListener('click', () => {
+  saveApiKey(apiKeyInput.value);
+  logTerm('Configuration saved securely to local storage.', 'success');
+  closeModal();
+});
+
+// ─── Local Vault (History) ───
+function loadVault() {
+  const history = JSON.parse(localStorage.getItem('deckcipher_vault') || '[]');
+  vaultList.innerHTML = '';
+  
+  if (history.length === 0) {
+    vaultList.innerHTML = '<p class="empty-state">No previous analyses found.</p>';
     return;
   }
-
-  selectedFile = file;
-
-  // Populate file info bar
-  fileNameEl.textContent = file.name;
-  fileSizeEl.textContent = formatFileSize(file.size);
-  fileInfo.classList.remove('hidden');
-  analyzeBtn.disabled = false;
-
-  // Reset results
-  resultsSection.classList.add('hidden');
+  
+  history.forEach((entry, index) => {
+    const div = document.createElement('div');
+    div.className = 'vault-item';
+    div.innerHTML = `
+      <div class="vault-meta">
+        <span>${new Date(entry.timestamp).toLocaleDateString()}</span>
+        <span>${entry.persona.toUpperCase()}</span>
+      </div>
+      <div class="vault-title">${entry.filename}</div>
+    `;
+    
+    div.addEventListener('click', () => renderResults(entry.data, entry.persona));
+    vaultList.appendChild(div);
+  });
 }
 
-// ─── Drag & Drop ───
+function saveToVault(filename, persona, data) {
+  const history = JSON.parse(localStorage.getItem('deckcipher_vault') || '[]');
+  history.unshift({
+    id: Date.now(),
+    timestamp: new Date().toISOString(),
+    filename,
+    persona,
+    data
+  });
+  
+  // Keep only last 10
+  if (history.length > 10) history.pop();
+  
+  localStorage.setItem('deckcipher_vault', JSON.stringify(history));
+  loadVault();
+  logTerm(`Analysis cached to Local Vault.`, 'system');
+}
+
+// ─── File Handling ───
+function formatBytes(bytes) {
+  if (bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+function handleFile(file) {
+  if (!file.name.toLowerCase().endsWith('.pptx')) {
+    logTerm(`Invalid file type: ${file.name}. Expected .pptx`, 'error');
+    return;
+  }
+  
+  selectedFile = file;
+  fileNameEl.textContent = file.name;
+  fileSizeEl.textContent = formatBytes(file.size);
+  
+  dropZone.classList.add('hidden');
+  fileInfo.classList.remove('hidden');
+  
+  logTerm(`File loaded in memory: ${file.name} (${formatBytes(file.size)})`, 'success');
+}
 
 dropZone.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', e => e.target.files.length && handleFile(e.target.files[0]));
 
-dropZone.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter' || e.key === ' ') {
+// Drag and drop events
+['dragenter', 'dragover', 'dragleave', 'drop'].forEach(evt => {
+  dropZone.addEventListener(evt, e => {
     e.preventDefault();
-    fileInput.click();
-  }
+    e.stopPropagation();
+  });
 });
 
-fileInput.addEventListener('change', (e) => {
-  if (e.target.files.length) handleFileSelect(e.target.files[0]);
-});
-
-dropZone.addEventListener('dragover', (e) => {
-  e.preventDefault();
-  dropZone.classList.add('drag-over');
-});
-
-dropZone.addEventListener('dragleave', (e) => {
-  e.preventDefault();
+dropZone.addEventListener('dragover', () => dropZone.classList.add('drag-over'));
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => {
   dropZone.classList.remove('drag-over');
+  if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
 });
 
-dropZone.addEventListener('drop', (e) => {
-  e.preventDefault();
-  dropZone.classList.remove('drag-over');
-  if (e.dataTransfer.files.length) handleFileSelect(e.dataTransfer.files[0]);
-});
-
-// ─── Core Pipeline ───
-
-/**
- * Extract text content from a .pptx file.
- *
- * @param {File} file — The .pptx file selected by the user
- * @returns {Promise<string>} — The extracted plain text
- */
+// ─── Parser (JSZip) ───
 async function extractTextFromPPTX(file) {
-  console.log('[DeckCipher] extractTextFromPPTX called with:', file.name);
+  logTerm('Initiating JSZip engine...', 'system');
+  setTermStatus('Parsing XML');
+  
   try {
     const zip = await JSZip.loadAsync(file);
+    logTerm('Archive loaded successfully.', 'system');
+    
+    // Find all slide XML files
     const slideFiles = Object.keys(zip.files)
       .filter(name => /^ppt\/slides\/slide\d+\.xml$/.test(name))
       .sort((a, b) => {
-        // Ensure slide1.xml comes before slide10.xml
         const numA = parseInt(a.match(/slide(\d+)\.xml/)[1], 10);
         const numB = parseInt(b.match(/slide(\d+)\.xml/)[1], 10);
         return numA - numB;
       });
-
+      
+    logTerm(`Detected ${slideFiles.length} slide(s) to process.`, 'system');
+    
     let extractedContext = '';
-    for (const slideName of slideFiles) {
+    
+    for (let i = 0; i < slideFiles.length; i++) {
+      const slideName = slideFiles[i];
       const xml = await zip.file(slideName).async('string');
+      
       const doc = new DOMParser().parseFromString(xml, 'application/xml');
       const textNodes = doc.getElementsByTagName('a:t');
       const slideText = Array.from(textNodes).map(n => n.textContent).join(' ');
-      extractedContext += slideText + '\n\n';
+      
+      if (slideText.trim()) {
+        extractedContext += `[Slide ${i+1}]\n${slideText}\n\n`;
+      }
     }
     
-    // Add placeholder text if no text is extracted (for testing empty/mock files)
     if (!extractedContext.trim()) {
-      return `[Placeholder] Extracted text from "${file.name}" would appear here.\n\nSlide 1: Introduction to Q4 Strategy...\nSlide 2: Revenue projections and KPIs...\nSlide 3: Team action items and next steps...`;
+      logTerm('No text found in slides. Using fallback mock data for testing.', 'error');
+      return `[Slide 1] Q4 Revenue was $5.2M, up 15%. [Slide 2] Action required: Need to expand cloud infrastructure to support EU growth.`;
     }
-
+    
+    logTerm(`Extraction complete. Total text length: ${extractedContext.length} chars.`, 'success');
     return extractedContext.trim();
+    
   } catch (error) {
-    console.error('[DeckCipher] Error extracting text from PPTX:', error);
+    logTerm(`Parse Error: ${error.message}`, 'error');
     throw error;
   }
 }
 
-/**
- * PLACEHOLDER — Send extracted text to NVIDIA NIM API for analysis.
- *
- * Implementation plan:
- *   1. POST to the NVIDIA NIM inference endpoint
- *   2. Include a system prompt instructing the model to produce:
- *      - An executive summary
- *      - A list of action items
- *      - A tone/sentiment analysis
- *   3. Parse the structured JSON response
- *
- * @param {string} text — Plain text extracted from the presentation
- * @returns {Promise<{summary: string, actions: string[], tone: string}>}
- */
-async function sendToNvidiaAPI(text) {
-  // TODO: Replace with real NVIDIA NIM API call
-  //
-  // Example future implementation:
-  // ─────────────────────────────────────────────
-  // const NVIDIA_API_KEY = 'your-api-key';
-  // const NVIDIA_ENDPOINT = 'https://integrate.api.nvidia.com/v1/chat/completions';
-  //
-  // const response = await fetch(NVIDIA_ENDPOINT, {
-  //   method: 'POST',
-  //   headers: {
-  //     'Content-Type': 'application/json',
-  //     'Authorization': `Bearer ${NVIDIA_API_KEY}`,
-  //   },
-  //   body: JSON.stringify({
-  //     model: 'meta/llama-3.1-70b-instruct',
-  //     messages: [
-  //       {
-  //         role: 'system',
-  //         content: `You are a presentation analyst. Given the text of a PowerPoint presentation, return a JSON object with three keys:
-  //           1. "summary" — a concise executive summary (2-3 sentences)
-  //           2. "actions" — an array of actionable items extracted from the deck
-  //           3. "tone" — a short analysis of the overall tone and sentiment`,
-  //       },
-  //       { role: 'user', content: text },
-  //     ],
-  //     temperature: 0.3,
-  //     max_tokens: 1024,
-  //   }),
-  // });
-  //
-  // const data = await response.json();
-  // return JSON.parse(data.choices[0].message.content);
-  // ─────────────────────────────────────────────
-
-  console.log('[DeckCipher] sendToNvidiaAPI called. Text length:', text.length);
-
-  // Simulated API latency
-  await new Promise((resolve) => setTimeout(resolve, 1500));
-
-  // Return mock response for development
-  return {
-    summary:
-      'The presentation outlines a comprehensive Q4 strategy focused on expanding market share in the enterprise segment. Key themes include revenue acceleration through strategic partnerships, product-led growth initiatives, and operational efficiency improvements targeting a 15% cost reduction.',
-    actions: [
-      'Finalize partnership agreement with Acme Corp by Nov 15',
-      'Launch enterprise tier pricing — target date: Dec 1',
-      'Conduct customer discovery interviews (n=30) by end of Q4',
-      'Prepare board deck with updated financial projections',
-      'Schedule cross-functional alignment meeting for next sprint',
-    ],
-    tone:
-      'The overall tone is confident and forward-looking, with a strong emphasis on data-driven decision making. The language is assertive but collaborative, suggesting alignment across leadership. Sentiment: Positive (82%), Neutral (15%), Cautionary (3%).',
+// ─── NVIDIA API Engine ───
+async function analyzeWithNVIDIA(text, persona) {
+  const apiKey = loadApiKey();
+  
+  if (!apiKey) {
+    logTerm('API Key missing. Please configure it in Settings.', 'error');
+    throw new Error('API Key missing');
+  }
+  
+  logTerm(`Initiating handshake with NVIDIA NIM (Llama-3.1-70B)...`, 'system');
+  setTermStatus('Inference Active');
+  
+  const personaPrompts = {
+    cfo: "You are a Chief Financial Officer. Focus on revenue, costs, ROI, financial risks, and fiscal strategy.",
+    tech_lead: "You are a Technical Lead. Focus on architecture, engineering efforts, technical debt, and infrastructure requirements.",
+    marketing: "You are a Marketing Director. Focus on brand messaging, audience engagement, market positioning, and campaign strategy.",
+    executive: "You are an Executive Generalist. Focus on high-level strategy, major milestones, overarching risks, and company alignment."
   };
+  
+  const systemPrompt = `
+${personaPrompts[persona]}
+
+Analyze the following presentation text. You must return your response STRICTLY as a JSON object with four keys. Do NOT wrap the JSON in markdown blocks like \`\`\`json.
+{
+  "summary": "A concise executive summary based on your persona lens.",
+  "actions": ["Actionable item 1", "Actionable item 2", "Actionable item 3"],
+  "sentiment": {
+    "positive": 60,
+    "neutral": 30,
+    "negative": 10
+  },
+  "tone_summary": "A one sentence summary of the presentation's overall tone."
 }
-
-// ─── Render Results ───
-
-/**
- * Populate the three result cards with API response data.
- * @param {{summary: string, actions: string[], tone: string}} results
- */
-function renderResults(results) {
-  // Executive Summary
-  summaryContent.textContent = results.summary;
-  summaryContent.classList.remove('card-placeholder');
-
-  // Action Items
-  actionsContent.innerHTML = '';
-  actionsContent.classList.remove('card-placeholder-list');
-  const ul = document.createElement('ul');
-  results.actions.forEach((item) => {
-    const li = document.createElement('li');
-    li.textContent = item;
-    ul.appendChild(li);
-  });
-  actionsContent.replaceWith(ul);
-  ul.id = 'actions-content';
-
-  // Tone Analysis
-  toneContent.textContent = results.tone;
-  toneContent.classList.remove('card-placeholder');
-
-  // Show results section
-  resultsSection.classList.remove('hidden');
-}
-
-// ─── Analyze Button Handler ───
-
-analyzeBtn.addEventListener('click', async () => {
-  if (!selectedFile) return;
+`;
 
   try {
-    analyzeBtn.disabled = true;
-    analyzeBtn.textContent = 'Extracting Text…';
+    const response = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: 'meta/llama-3.1-70b-instruct',
+        messages: [
+          { role: 'system', content: systemPrompt.trim() },
+          { role: 'user', content: text }
+        ],
+        temperature: 0.2,
+        max_tokens: 1024,
+      }),
+    });
 
-    // Step 1: Extract text from the PPTX
-    const extractedContext = await extractTextFromPPTX(selectedFile);
+    if (!response.ok) {
+      const err = await response.text();
+      throw new Error(`NVIDIA API Error ${response.status}: ${err}`);
+    }
 
-    // Step 2: Show loading state after extraction
-    setLoading(true);
-    document.querySelector('.spinner-label').textContent = 'AI is thinking…';
-    analyzeBtn.textContent = 'AI is thinking…';
-
-    // Step 3: Send to NVIDIA API for analysis
-    const results = await sendToNvidiaAPI(extractedContext);
-
-    // Step 4: Render results
-    renderResults(results);
-
-    // Scroll to results
-    resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    logTerm('Inference successful. Receiving payload...', 'success');
+    const data = await response.json();
+    let content = data.choices[0].message.content.trim();
+    
+    // Cleanup markdown if present
+    if (content.startsWith('```json')) {
+      content = content.replace(/```json/g, '').replace(/```/g, '').trim();
+    }
+    
+    return JSON.parse(content);
+    
   } catch (error) {
-    console.error('[DeckCipher] Analysis failed:', error);
-    alert('Something went wrong during analysis. Please try again.');
+    logTerm(`Inference failed: ${error.message}`, 'error');
+    throw error;
+  }
+}
+
+// ─── Rendering & Charts ───
+function renderChart(sentimentData) {
+  const ctx = document.getElementById('sentiment-chart').getContext('2d');
+  
+  if (chartInstance) {
+    chartInstance.destroy();
+  }
+  
+  const isDark = htmlEl.getAttribute('data-theme') === 'dark';
+  const textColor = isDark ? '#f8f9fa' : '#18181b';
+  
+  chartInstance = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: ['Positive', 'Neutral', 'Negative'],
+      datasets: [{
+        label: 'Sentiment Breakdown (%)',
+        data: [sentimentData.positive, sentimentData.neutral, sentimentData.negative],
+        backgroundColor: [
+          'rgba(118, 185, 0, 0.7)',  // NVIDIA Green
+          'rgba(161, 161, 170, 0.7)',// Zinc
+          'rgba(255, 85, 85, 0.7)'   // Red
+        ],
+        borderColor: [
+          '#76b900',
+          '#a1a1aa',
+          '#ff5555'
+        ],
+        borderWidth: 1,
+        borderRadius: 4
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          max: 100,
+          ticks: { color: textColor },
+          grid: { color: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }
+        },
+        x: {
+          ticks: { color: textColor },
+          grid: { display: false }
+        }
+      }
+    }
+  });
+}
+
+function renderResults(data, persona) {
+  // Update Persona Badge
+  resultPersonaBadge.textContent = document.querySelector(`#persona-select option[value="${persona}"]`).textContent;
+  
+  // Summary
+  summaryContent.innerHTML = data.summary;
+  
+  // Actions
+  actionsContent.innerHTML = '';
+  data.actions.forEach(act => {
+    const li = document.createElement('li');
+    li.textContent = act;
+    actionsContent.appendChild(li);
+  });
+  
+  // Tone & Chart
+  toneSummary.textContent = data.tone_summary;
+  renderChart(data.sentiment);
+  
+  // Reveal UI
+  resultsSection.classList.remove('hidden');
+  resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ─── Core Execution Flow ───
+analyzeBtn.addEventListener('click', async () => {
+  if (!selectedFile) return;
+  
+  const persona = personaSelect.value;
+  
+  try {
+    analyzeBtn.disabled = true;
+    analyzeBtn.innerHTML = '<i class="ph ph-spinner-gap ph-spin"></i> Processing...';
+    
+    // 1. Extract Text
+    const rawText = await extractTextFromPPTX(selectedFile);
+    
+    // 2. NVIDIA Inference
+    const resultData = await analyzeWithNVIDIA(rawText, persona);
+    logTerm('Payload parsed successfully.', 'success');
+    
+    // 3. Render
+    renderResults(resultData, persona);
+    
+    // 4. Save to Vault
+    saveToVault(selectedFile.name, persona, resultData);
+    
+    setTermStatus('Idle');
+    
+  } catch (error) {
+    setTermStatus('Failed', true);
   } finally {
-    setLoading(false);
     analyzeBtn.disabled = false;
-    analyzeBtn.textContent = 'Analyze Presentation';
-    document.querySelector('.spinner-label').textContent = 'Analyzing your presentation…';
+    analyzeBtn.innerHTML = '<i class="ph ph-sparkle"></i> Initiate Analysis';
   }
 });
 
-// ─── Init ───
-console.log('[DeckCipher AI] Initialized — Ready for upload.');
+// ─── Initialization ───
+document.addEventListener('DOMContentLoaded', () => {
+  loadVault();
+  
+  // Quick check for API key
+  if (!loadApiKey()) {
+    logTerm('Welcome to DeckCipher. Please configure your NVIDIA API key in Settings.', 'system');
+  }
+});
