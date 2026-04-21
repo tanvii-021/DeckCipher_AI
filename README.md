@@ -30,3 +30,23 @@ This project demonstrates advanced front-end engineering capabilities, including
 - Architecting robust, fault-tolerant AI inference pipelines.
 - Designing enterprise-ready, accessible, and responsive user interfaces.
 - Managing client-side state and security (API key isolation).
+
+---
+
+## 🌐 GitHub Pages Deployment Guide
+
+Because this app utilizes a **Zero-Server Architecture** (there is no Node.js backend or database to host), it can be deployed completely free in seconds using GitHub Pages. 
+
+### Deployment Steps:
+1. **Push to GitHub**: Make sure all three files (`index.html`, `style.css`, and `app.js`) are committed and pushed to the **root** `/` directory of your GitHub repository.
+2. **Open Settings**: Navigate to your repository on GitHub and click the **Settings** tab.
+3. **Go to Pages**: In the left sidebar, click on **Pages**.
+4. **Configure Build and Deployment**:
+   - Under **Source**, select `Deploy from a branch`.
+   - Under **Branch**, select your main branch (e.g., `main` or `master`).
+   - Ensure the folder dropdown is set to **`/ (root)`**.
+   - Click **Save**.
+5. **Wait for the Build**: GitHub will run a background workflow to deploy your site. This usually takes less than a minute.
+6. **Access Your Live App**: Refresh the page, and you will see a URL at the top stating *"Your site is live at https://[your-username].github.io/[repository-name]"*.
+
+*(Note: Because the API key is securely saved in the user's `localStorage` via the in-app Settings modal, you can safely deploy this to a public repository without leaking your own NVIDIA credentials!)*
