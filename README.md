@@ -8,6 +8,8 @@
 [![Advanced AI](https://img.shields.io/badge/Powered_by-Advanced_AI-00ff00?style=for-the-badge)](http://tanvii.me/DeckCipher_AI/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2A%2Fgithub.com%2Ftanvii-021%2FDeckCipher_AI&env=NVIDIA_API_KEY&envDescription=Enter%20your%20NVIDIA%20NIM%20API%20Key%20to%20power%20the%20AI%20backend.)
+
 *Transform static slide decks into actionable business intelligence in seconds.*
 
 [**Explore the Live Dashboard**](http://tanvii.me/DeckCipher_AI/) • [**Report Bug**](https://github.com/tanvii-021/DeckCipher_AI/issues) • [**Request Feature**](https://github.com/tanvii-021/DeckCipher_AI/issues)
