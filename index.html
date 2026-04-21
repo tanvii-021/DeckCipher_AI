@@ -16,6 +16,8 @@
 
   <!-- External Libraries -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <!-- Styles -->
@@ -41,6 +43,14 @@
             <button id="toggle-visibility-btn" class="icon-btn inner-btn" aria-label="Toggle API Key Visibility">
               <i class="ph ph-eye"></i>
             </button>
+          </div>
+        </div>
+        <div class="form-group" style="margin-top: 1.5rem;">
+          <label for="proxy-url-input">CORS Proxy URL (Optional)</label>
+          <p class="form-help">If you are using DeckCipher from GitHub Pages, browser security (CORS) prevents direct API calls. Enter a CORS Proxy URL to bypass this (e.g., <code>https://corsproxy.io/?url=</code>).</p>
+          <div class="input-wrapper">
+            <i class="ph ph-globe input-icon"></i>
+            <input type="text" id="proxy-url-input" placeholder="https://your-proxy.com/?url=" spellcheck="false" autocomplete="off" />
           </div>
         </div>
       </div>
@@ -110,10 +120,10 @@
           <div id="drop-zone" class="drop-zone" role="button" tabindex="0">
             <i class="ph ph-upload-simple drop-icon"></i>
             <div class="drop-text">
-              <span class="primary-text">Drag & drop your .pptx here</span>
+              <span class="primary-text">Drag & drop your .pptx, .pdf, or .docx here</span>
               <span class="secondary-text">or click to browse local files</span>
             </div>
-            <input type="file" id="file-input" accept=".pptx" class="sr-only" />
+            <input type="file" id="file-input" accept=".pptx, .pdf, .docx" class="sr-only" />
           </div>
 
           <!-- File Info & Action -->

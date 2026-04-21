@@ -16,11 +16,16 @@
 
 ---
 
-## 📖 Overview
+## 📖 The Problem: "Deck Blindness"
 
-**DeckCipher AI** is a professional-grade analytical client designed to bridge the gap between unstructured `.pptx` presentations and structured executive data. 
+In modern enterprise and consulting environments, leadership teams suffer from **"Deck Blindness."** They are inundated with 50+ page `.pptx` and `.pdf` presentations, yet rarely have the time to read them cover-to-cover. 
+* A CFO needs to know the financial risk.
+* A CTO needs to see the technical debt.
+* A Marketing Director needs to gauge the tonal impact.
 
-Built on a cutting-edge **Zero-Server Architecture**, DeckCipher operates entirely within the browser. It parses binary OpenXML files locally and interfaces with advanced Large Language Models to deliver multi-persona insights, strategic action items, and sentiment analysis—all without ever uploading your proprietary files to a third-party server.
+Manually parsing these documents is tedious and error-prone. **DeckCipher AI** solves this by acting as a zero-latency, multi-persona intelligence engine. Drop in a file, select your stakeholder "Lens," and instantly receive strategic action items, sentiment analysis, and a tailored executive summary.
+
+Built on a cutting-edge **Zero-Server Architecture**, DeckCipher parses binary OpenXML and PDF files entirely within your local browser, meaning your proprietary corporate data is never uploaded to a third-party server prior to inference.
 
 ---
 
@@ -72,10 +77,12 @@ Use the dropdown menu to select the perspective you want the AI to adopt.
 </details>
 
 <details>
-<summary><b>3. Ingest Data (Upload a .pptx)</b></summary>
+<summary><b>3. Ingest Data (Upload a Document)</b></summary>
 
-Drag and drop any standard Microsoft PowerPoint (`.pptx`) file into the designated upload zone. 
-*Don't have one? Create a 2-slide test deck with some fake business bullet points!*
+Drag and drop any standard `.pptx`, `.pdf`, or `.docx` file into the designated upload zone. 
+
+**Need an example document?** 
+A python script `create_test_ppt.py` is included in the source code. Run it locally (`python create_test_ppt.py`) to instantly generate a realistic `Q3_Strategy_Test.pptx` corporate presentation specifically designed to test the AI's analytical capabilities.
 </details>
 
 <details>
@@ -103,6 +110,20 @@ Within seconds, the dashboard will render:
 - **AI/ML Layer:** High-performance REST APIs.
 - **Data Visualization:** `Chart.js`.
 - **Hosting:** GitHub Pages (Zero-Server Architecture).
+
+---
+
+## 📈 Scaling to Enterprise Production
+
+While the current Zero-Server (GitHub Pages) architecture is perfect for rapid deployment and absolute client-side privacy, scaling DeckCipher to a global enterprise standard requires the following architectural evolutions:
+
+1. **BFF (Backend-For-Frontend) Migration**: 
+   * *The Problem*: Client-side API calls to NVIDIA NIM are blocked by browser CORS security on remote domains, requiring a proxy workaround.
+   * *The Solution*: Migrate the stack to a **Next.js API Route** or **FastAPI** microservice. This completely abstracts the AI API key from the client, eliminates CORS issues natively, and enables secure rate-limiting.
+2. **Persistent Enterprise Database**:
+   * *The Solution*: Replace browser `localStorage` with a robust **PostgreSQL** database (via Prisma or Supabase). This enables cross-device sync, team-wide historical analysis sharing, and Role-Based Access Control (RBAC).
+3. **Advanced Optical Character Recognition (OCR)**:
+   * *The Solution*: Integrate Tesseract.js or AWS Textract to parse text embedded inside images within PDFs and presentations, achieving 100% data extraction parity.
 
 ---
 <div align="center">

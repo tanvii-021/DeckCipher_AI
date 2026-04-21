@@ -14,6 +14,7 @@ const openSettingsBtn = document.getElementById('open-settings-btn');
 const closeModalBtn = document.getElementById('close-modal-btn');
 const modalBackdrop = document.getElementById('modal-backdrop');
 const apiKeyInput = document.getElementById('api-key-input');
+const proxyUrlInput = document.getElementById('proxy-url-input');
 const toggleVisBtn = document.getElementById('toggle-visibility-btn');
 const saveSettingsBtn = document.getElementById('save-settings-btn');
 
@@ -87,19 +88,31 @@ function loadApiKey() {
   return localStorage.getItem('deckcipher_nvidia_key') || DEFAULT_API_KEY;
 }
 
-function saveApiKey(key) {
+function loadProxyUrl() {
+  return localStorage.getItem('deckcipher_proxy_url') || '';
+}
+
+function saveApiKey(key, proxy) {
   if (key.trim() === '') {
     localStorage.removeItem('deckcipher_nvidia_key');
-    logTerm('Custom configuration cleared. Reverted to default system key.', 'system');
+    logTerm('Custom API Key cleared. Reverted to default system key.', 'system');
   } else {
     localStorage.setItem('deckcipher_nvidia_key', key.trim());
-    logTerm('Custom configuration saved securely to local storage.', 'success');
+    logTerm('Custom API Key saved securely to local storage.', 'success');
+  }
+  
+  if (proxy.trim() === '') {
+    localStorage.removeItem('deckcipher_proxy_url');
+  } else {
+    localStorage.setItem('deckcipher_proxy_url', proxy.trim());
+    logTerm('CORS Proxy URL saved.', 'success');
   }
 }
 
 // Open Modal
 openSettingsBtn.addEventListener('click', () => {
   apiKeyInput.value = localStorage.getItem('deckcipher_nvidia_key') || '';
+  proxyUrlInput.value = localStorage.getItem('deckcipher_proxy_url') || '';
   settingsModal.classList.remove('hidden');
 });
 
@@ -119,8 +132,7 @@ toggleVisBtn.addEventListener('click', () => {
 
 // Save Settings
 saveSettingsBtn.addEventListener('click', () => {
-  saveApiKey(apiKeyInput.value);
-  logTerm('Configuration saved securely to local storage.', 'success');
+  saveApiKey(apiKeyInput.value, proxyUrlInput.value);
   closeModal();
 });
 
@@ -178,8 +190,9 @@ function formatBytes(bytes) {
 }
 
 function handleFile(file) {
-  if (!file.name.toLowerCase().endsWith('.pptx')) {
-    logTerm(`Invalid file type: ${file.name}. Expected .pptx`, 'error');
+  const ext = file.name.split('.').pop().toLowerCase();
+  if (!['pptx', 'pdf', 'docx', 'doc'].includes(ext)) {
+    logTerm(`Invalid file type: ${file.name}. Expected .pptx, .pdf, or .docx`, 'error');
     return;
   }
   
@@ -211,7 +224,52 @@ dropZone.addEventListener('drop', e => {
   if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
 });
 
-// ─── Parser (JSZip) ───
+// ─── Multi-Format Parsing Engine ───
+
+// 1. PDF Extractor
+async function extractTextFromPDF(file) {
+  logTerm('Initiating PDF.js engine...', 'system');
+  setTermStatus('Parsing PDF');
+  try {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    logTerm(`Loaded PDF with ${pdf.numPages} page(s).`, 'system');
+    
+    let extractedContext = '';
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      const strings = content.items.map(item => item.str);
+      const pageText = strings.join(' ');
+      if (pageText.trim()) {
+        extractedContext += `[Page ${i}]\n${pageText}\n\n`;
+      }
+    }
+    logTerm(`Extraction complete. Total text length: ${extractedContext.length} chars.`, 'success');
+    return extractedContext.trim() || '[Placeholder] Failed to extract meaningful text from PDF.';
+  } catch (error) {
+    logTerm(`PDF Parse Error: ${error.message}`, 'error');
+    throw error;
+  }
+}
+
+// 2. DOCX Extractor
+async function extractTextFromDOCX(file) {
+  logTerm('Initiating Mammoth.js engine...', 'system');
+  setTermStatus('Parsing DOCX');
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    const result = await mammoth.extractRawText({ arrayBuffer: arrayBuffer });
+    logTerm(`Extraction complete. Total text length: ${result.value.length} chars.`, 'success');
+    return result.value.trim() || '[Placeholder] Failed to extract meaningful text from DOCX.';
+  } catch (error) {
+    logTerm(`DOCX Parse Error: ${error.message}`, 'error');
+    throw error;
+  }
+}
+
+// 3. PPTX Extractor
 async function extractTextFromPPTX(file) {
   logTerm('Initiating JSZip engine...', 'system');
   setTermStatus('Parsing XML');
@@ -260,6 +318,20 @@ async function extractTextFromPPTX(file) {
   }
 }
 
+// Master Router
+async function extractText(file) {
+  const ext = file.name.split('.').pop().toLowerCase();
+  if (ext === 'pdf') {
+    return await extractTextFromPDF(file);
+  } else if (ext === 'docx' || ext === 'doc') {
+    return await extractTextFromDOCX(file);
+  } else if (ext === 'pptx') {
+    return await extractTextFromPPTX(file);
+  } else {
+    throw new Error('Unsupported file type.');
+  }
+}
+
 // ─── NVIDIA API Engine ───
 async function analyzeWithNVIDIA(text, persona) {
   const apiKey = loadApiKey();
@@ -296,7 +368,15 @@ Analyze the following presentation text. You must return your response STRICTLY 
 `;
 
   try {
-    const response = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
+    const proxyUrl = loadProxyUrl();
+    const endpoint = 'https://integrate.api.nvidia.com/v1/chat/completions';
+    const finalUrl = proxyUrl ? proxyUrl + encodeURIComponent(endpoint) : endpoint;
+    
+    if (!proxyUrl && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+      logTerm('Warning: Running on external domain without a proxy. CORS may block the request.', 'system');
+    }
+
+    const response = await fetch(finalUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -330,7 +410,12 @@ Analyze the following presentation text. You must return your response STRICTLY 
     return JSON.parse(content);
     
   } catch (error) {
-    logTerm(`Inference failed: ${error.message}`, 'error');
+    if (error.message.includes('Failed to fetch')) {
+      logTerm('Inference failed: CORS Blocked. Browser prevented direct API call from a remote domain.', 'error');
+      logTerm('Solution: Open Settings and configure a CORS Proxy URL (e.g. corsproxy.io).', 'error');
+    } else {
+      logTerm(`Inference failed: ${error.message}`, 'error');
+    }
     throw error;
   }
 }
@@ -424,7 +509,7 @@ analyzeBtn.addEventListener('click', async () => {
     analyzeBtn.innerHTML = '<i class="ph ph-spinner-gap ph-spin"></i> Processing...';
     
     // 1. Extract Text
-    const rawText = await extractTextFromPPTX(selectedFile);
+    const rawText = await extractText(selectedFile);
     
     // 2. NVIDIA Inference
     const resultData = await analyzeWithNVIDIA(rawText, persona);
