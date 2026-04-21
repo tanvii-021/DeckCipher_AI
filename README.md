@@ -23,9 +23,21 @@ In modern enterprise and consulting environments, leadership teams suffer from *
 * A CTO needs to see the technical debt.
 * A Marketing Director needs to gauge the tonal impact.
 
-Manually parsing these documents is tedious and error-prone. **DeckCipher AI** solves this by acting as a zero-latency, multi-persona intelligence engine. Drop in a file, select your stakeholder "Lens," and instantly receive strategic action items, sentiment analysis, and a tailored executive summary.
+Manually parsing these documents is tedious and error-prone. **DeckCipher AI** acts as a zero-latency intelligence engine. Drop in a file, select your stakeholder "Lens," and instantly receive strategic action items, sentiment analysis, and a tailored executive summary.
 
-Built on a cutting-edge **Zero-Server Architecture**, DeckCipher parses binary OpenXML and PDF files entirely within your local browser, meaning your proprietary corporate data is never uploaded to a third-party server prior to inference.
+### 🗺️ System Architecture
+
+```mermaid
+graph TD
+    A[User Document: PPTX/PDF/DOCX] --> B(Browser-Side Parsing)
+    B -->|JSZip / PDF.js| C{Local Extraction}
+    C --> D[Extracted Context]
+    D --> E(CORS Proxy / Backend)
+    E -->|Secure Handshake| F[NVIDIA NIM: Llama-3.3-70B]
+    F -->|Inference Payload| G{Result Processing}
+    G --> H[Executive Dashboard]
+    G --> I[History Vault]
+```
 
 ---
 

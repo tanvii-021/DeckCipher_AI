@@ -81,7 +81,7 @@ themeToggleBtn.addEventListener('click', () => {
 
 // ─── Settings & API Key Management ───
 // The default key allows public visitors to use the app immediately.
-const DEFAULT_API_KEY = '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';
+const DEFAULT_API_KEY = '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';
 
 function loadApiKey() {
   // If the user has saved a custom key in settings, use it. Otherwise, use the default.
@@ -383,7 +383,7 @@ Analyze the following presentation text. You must return your response STRICTLY 
         'Authorization': `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: 'meta/llama-3.1-70b-instruct',
+        model: 'meta/llama-3.3-70b-instruct',
         messages: [
           { role: 'system', content: systemPrompt.trim() },
           { role: 'user', content: text }
