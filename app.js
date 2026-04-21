@@ -370,7 +370,17 @@ Analyze the following presentation text. You must return your response STRICTLY 
   try {
     const proxyUrl = loadProxyUrl();
     const endpoint = 'https://integrate.api.nvidia.com/v1/chat/completions';
-    const finalUrl = proxyUrl ? proxyUrl + encodeURIComponent(endpoint) : endpoint;
+    
+    // If a proxy URL is provided (like our custom Vercel backend), use it entirely.
+    // Otherwise, default to NVIDIA (which works locally but fails on GitHub Pages).
+    let finalUrl = endpoint;
+    if (proxyUrl) {
+      if (proxyUrl.includes('?url=')) {
+        finalUrl = proxyUrl + encodeURIComponent(endpoint);
+      } else {
+        finalUrl = proxyUrl;
+      }
+    }
     
     if (!proxyUrl && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
       logTerm('Warning: Running on external domain without a proxy. CORS may block the request.', 'system');

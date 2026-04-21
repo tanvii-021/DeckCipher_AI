@@ -130,8 +130,13 @@ Within seconds, the dashboard will render:
 While the current Zero-Server (GitHub Pages) architecture is perfect for rapid deployment and absolute client-side privacy, scaling DeckCipher to a global enterprise standard requires the following architectural evolutions:
 
 1. **BFF (Backend-For-Frontend) Migration**: 
-   * *The Problem*: Client-side API calls to NVIDIA NIM are blocked by browser CORS security on remote domains, requiring a proxy workaround.
-   * *The Solution*: Migrate the stack to a **Next.js API Route** or **FastAPI** microservice. This completely abstracts the AI API key from the client, eliminates CORS issues natively, and enables secure rate-limiting.
+   * *The Problem*: Client-side API calls to NVIDIA NIM are blocked by browser CORS security on remote domains like GitHub Pages.
+   * *The Solution*: We have included a ready-to-deploy **Vercel Backend Proxy** in the `deckcipher-proxy` folder.
+   * **How to fix the live site:** 
+     1. Create a free account on [Vercel](https://vercel.com).
+     2. Drag and drop the `deckcipher-proxy` folder into the Vercel dashboard to deploy it instantly.
+     3. Add an Environment Variable in Vercel called `NVIDIA_API_KEY` and paste your key.
+     4. Open DeckCipher on GitHub Pages, go to Settings, and paste your new Vercel URL (e.g., `https://deckcipher-proxy.vercel.app/api`) into the CORS Proxy URL field. **The app will now work flawlessly and securely!**
 2. **Persistent Enterprise Database**:
    * *The Solution*: Replace browser `localStorage` with a robust **PostgreSQL** database (via Prisma or Supabase). This enables cross-device sync, team-wide historical analysis sharing, and Role-Based Access Control (RBAC).
 3. **Advanced Optical Character Recognition (OCR)**:
