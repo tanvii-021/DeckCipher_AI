@@ -79,17 +79,27 @@ themeToggleBtn.addEventListener('click', () => {
 });
 
 // ─── Settings & API Key Management ───
+// The default key allows public visitors to use the app immediately.
+const DEFAULT_API_KEY = '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';
+
 function loadApiKey() {
-  return localStorage.getItem('deckcipher_nvidia_key') || '';
+  // If the user has saved a custom key in settings, use it. Otherwise, use the default.
+  return localStorage.getItem('deckcipher_nvidia_key') || DEFAULT_API_KEY;
 }
 
 function saveApiKey(key) {
-  localStorage.setItem('deckcipher_nvidia_key', key.trim());
+  if (key.trim() === '') {
+    localStorage.removeItem('deckcipher_nvidia_key');
+    logTerm('Custom configuration cleared. Reverted to default system key.', 'system');
+  } else {
+    localStorage.setItem('deckcipher_nvidia_key', key.trim());
+    logTerm('Custom configuration saved securely to local storage.', 'success');
+  }
 }
 
 // Open Modal
 openSettingsBtn.addEventListener('click', () => {
-  apiKeyInput.value = loadApiKey();
+  apiKeyInput.value = localStorage.getItem('deckcipher_nvidia_key') || '';
   settingsModal.classList.remove('hidden');
 });
 
@@ -439,9 +449,5 @@ analyzeBtn.addEventListener('click', async () => {
 // ─── Initialization ───
 document.addEventListener('DOMContentLoaded', () => {
   loadVault();
-  
-  // Quick check for API key
-  if (!loadApiKey()) {
-    logTerm('Welcome to DeckCipher. Please configure your NVIDIA API key in Settings.', 'system');
-  }
+  logTerm('Welcome to DeckCipher. System is ready for analysis.', 'system');
 });

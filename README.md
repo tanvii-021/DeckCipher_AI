@@ -5,7 +5,7 @@
 **The Enterprise Presentation Intelligence Engine**
 
 [![Deploy Status](https://img.shields.io/badge/Deployment-Live-success?style=for-the-badge&logo=github)](http://tanvii.me/DeckCipher_AI/)
-[![NVIDIA NIM](https://img.shields.io/badge/Powered_by-NVIDIA_NIM-76b900?style=for-the-badge&logo=nvidia)](https://build.nvidia.com/)
+[![Advanced AI](https://img.shields.io/badge/Powered_by-Advanced_AI-00ff00?style=for-the-badge)](http://tanvii.me/DeckCipher_AI/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 
 *Transform static slide decks into actionable business intelligence in seconds.*
@@ -20,7 +20,7 @@
 
 **DeckCipher AI** is a professional-grade analytical client designed to bridge the gap between unstructured `.pptx` presentations and structured executive data. 
 
-Built on a cutting-edge **Zero-Server Architecture**, DeckCipher operates entirely within the browser. It parses binary OpenXML files locally and directly interfaces with **NVIDIA's Llama-3.1-70B** Inference Microservices (NIM) to deliver multi-persona insights, strategic action items, and sentiment analysis—all without ever uploading your proprietary files to a third-party server.
+Built on a cutting-edge **Zero-Server Architecture**, DeckCipher operates entirely within the browser. It parses binary OpenXML files locally and interfaces with advanced Large Language Models to deliver multi-persona insights, strategic action items, and sentiment analysis—all without ever uploading your proprietary files to a third-party server.
 
 ---
 
@@ -29,11 +29,11 @@ Built on a cutting-edge **Zero-Server Architecture**, DeckCipher operates entire
 | Feature | Description |
 | :--- | :--- |
 | 🛡️ **Zero-Server Privacy** | `.pptx` files are parsed locally in your browser using `JSZip`. Your actual file never leaves your machine. |
-| 🧠 **NVIDIA NIM Integration** | Utilizes enterprise-grade Llama-3.1-70B models via direct API handshakes for unparalleled reasoning. |
+| 🧠 **Advanced AI Integration** | Utilizes enterprise-grade 70B parameter models via direct API handshakes for unparalleled reasoning. |
 | 🎭 **Multi-Persona Analysis** | View your deck through different lenses: **CFO**, **Technical Lead**, **Marketing**, or **Executive**. |
 | 📊 **Dynamic Telemetry** | Real-time Operations Terminal logs the XML extraction and API network requests as they happen. |
 | 📈 **Sentiment Visualization** | Automatically maps the AI's tonal analysis into an interactive `Chart.js` graph. |
-| 🗄️ **Local History Vault** | Sessions and API configurations are encrypted and cached in your browser's `localStorage`. |
+| 🗄️ **Local History Vault** | Sessions and custom API configurations are encrypted and cached in your browser's `localStorage`. |
 
 ---
 
@@ -43,8 +43,8 @@ Built on a cutting-edge **Zero-Server Architecture**, DeckCipher operates entire
 The application is hosted via GitHub Pages, which serves static HTML, CSS, and JavaScript. 
 
 1. **Client-Side Extraction:** When a user drops a `.pptx` file into the live UI, the browser uses the `JSZip` library to crack open the binary file and extract text from the XML nodes.
-2. **Direct-to-GPU Inference:** The JavaScript logic takes the extracted text, wraps it in a Persona-based system prompt, and makes an asynchronous `fetch()` request **directly** to the NVIDIA NIM API endpoint (`integrate.api.nvidia.com`).
-3. **Bring Your Own Key (BYOK):** Because the app is public, hardcoding a private API key would expose it to the internet. Instead, DeckCipher uses a secure **Settings Modal**. Users paste their own NVIDIA API Key into the UI, which is saved exclusively in their browser's local storage. This allows the AI to work flawlessly on the live site while maintaining absolute credential security.
+2. **Direct Inference:** The JavaScript logic takes the extracted text, wraps it in a Persona-based system prompt, and makes an asynchronous `fetch()` request directly to an advanced AI API endpoint.
+3. **Seamless Public Access & BYOK:** The application has a **built-in default API key** seamlessly hardcoded into the backend logic. This means anyone visiting the site can use the AI immediately without signing up or entering credentials! However, for enterprise users who want absolute privacy, DeckCipher uses a secure **Settings Modal**. Users can paste their own private API Key into the UI, overriding the default key.
 
 ---
 
@@ -57,12 +57,11 @@ Want to see DeckCipher AI in action? The application is fully deployed and acces
 ### Step-by-Step Testing Protocol
 
 <details>
-<summary><b>1. Secure Your Session (API Configuration)</b></summary>
+<summary><b>1. Open the Dashboard</b></summary>
 
 1. Open the [Live Dashboard](http://tanvii.me/DeckCipher_AI/).
-2. Click the **Settings** gear icon in the top right.
-3. Paste your active NVIDIA NIM API key (`nvapi-...`).
-4. Click **Save Configuration**. *(Your key is now safely isolated in your browser's local storage).*
+2. You can immediately start using the application thanks to the integrated default AI key!
+*(Optional: Click the Settings gear to supply your own private API key for dedicated rate limits).*
 </details>
 
 <details>
@@ -82,7 +81,7 @@ Drag and drop any standard Microsoft PowerPoint (`.pptx`) file into the designat
 <details>
 <summary><b>4. Monitor the Operations Terminal</b></summary>
 
-Click **Initiate Analysis**. Watch the black Operations Terminal on the screen. You will see real-time logs as the browser locally unzips the file, extracts the text, and initiates the secure handshake with the NVIDIA servers.
+Click **Initiate Analysis**. Watch the black Operations Terminal on the screen. You will see real-time logs as the browser locally unzips the file, extracts the text, and initiates the secure inference handshake.
 </details>
 
 <details>
@@ -101,11 +100,11 @@ Within seconds, the dashboard will render:
 - **UI/UX:** Custom Glassmorphism Design System, CSS Variables (Dark/Light Mode), Phosphor Icons, Inter Font.
 - **Frontend Logic:** Vanilla ES6+ JavaScript, HTML5.
 - **Parsing Engine:** `JSZip` (Client-side binary manipulation).
-- **AI/ML Layer:** NVIDIA NIM APIs (Llama-3.1-70B).
+- **AI/ML Layer:** High-performance REST APIs.
 - **Data Visualization:** `Chart.js`.
 - **Hosting:** GitHub Pages (Zero-Server Architecture).
 
 ---
 <div align="center">
-  <i>Engineered for high-performance context processing. Powered by NVIDIA.</i>
+  <i>Engineered for high-performance context processing.</i>
 </div>
