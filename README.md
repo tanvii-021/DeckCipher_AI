@@ -50,3 +50,22 @@ Because this app utilizes a **Zero-Server Architecture** (there is no Node.js ba
 6. **Access Your Live App**: Refresh the page, and you will see a URL at the top stating *"Your site is live at https://[your-username].github.io/[repository-name]"*.
 
 *(Note: Because the API key is securely saved in the user's `localStorage` via the in-app Settings modal, you can safely deploy this to a public repository without leaking your own NVIDIA credentials!)*
+
+---
+
+## 🧪 How to Test the Application
+
+To verify the end-to-end functionality of DeckCipher AI, follow these professional testing steps:
+
+1. **Access the Live Environment**: Navigate to the deployed application URL (e.g., [http://tanvii.me/DeckCipher_AI/](http://tanvii.me/DeckCipher_AI/)).
+2. **Secure Key Configuration**: 
+   - Click the **Settings** button in the top right corner.
+   - Enter your active **NVIDIA NIM API Key**.
+   - Click **Save Configuration** (your key is instantly encrypted into browser `localStorage`).
+3. **Establish Context**: Use the "Analytical Lens" dropdown to select a Persona (e.g., *Chief Financial Officer* or *Technical Lead*).
+4. **Data Ingestion (The Test File)**: 
+   - You will need a standard Microsoft PowerPoint file (`.pptx`).
+   - *Test Tip:* Create a simple 2-3 slide `.pptx` file containing some mock business data (e.g., "Q3 Revenue is up 15%", "We need to hire 5 engineers").
+   - Drag and drop this `.pptx` file directly into the **Upload Zone**.
+5. **Monitor Telemetry**: Watch the **Operations Terminal** in real-time as the system unzips the binary file, scrapes the XML text nodes, and initiates the secure handshake with the NVIDIA Llama-3.1-70B model.
+6. **Review Insights**: Within seconds, the dashboard will populate with a tailored Executive Summary, Strategic Action Items, and a dynamic Chart.js Sentiment graph.
